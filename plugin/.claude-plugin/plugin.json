@@ -1,6 +1,6 @@
 {
   "name": "multi-agent",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Run your OWN agent on other AI model CLIs (grok / codex / claude) as independent second opinions — no API, each model runs the agent natively. Two commands: /multi-agent (a single-model, live, steerable review you can talk to while it runs) and /arena (a deterministic multi-model adversarial arena — independent audit → cross-critique until positions converge → code-verifying judge → scoreboard, shown live in /workflows).",
   "author": { "name": "Serdar Doğrubakar", "url": "https://github.com/serdardb" },
   "homepage": "https://github.com/serdardb/multi-agent",

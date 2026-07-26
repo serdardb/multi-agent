@@ -1,13 +1,12 @@
 export const meta = {
   name: 'arena',
   description: 'Deterministic multi-model review arena: independent audit -> cross-critique (convergence-gated) -> code-verifying judge. Parameterized by args (agent, models, topic, mode, rounds). Round logic is FIXED here — nothing is improvised.',
-  phases: [
-    { title: 'Round 1 · Recon', detail: 'each model audits independently' },
-    { title: 'Round 2 · Clash', detail: 'first cross-critique' },
-    { title: 'Round 3 · Duel', detail: 'further cross-critique (dynamic, until convergence)' },
-    { title: 'Round 4 · Rematch', detail: 'more rounds if positions still move' },
-    { title: 'Judge', detail: 'code-verifying judge + scoreboard' },
-  ],
+  // NO static phases list on purpose: the rounds that actually run depend on the
+  // user's min/max choice and on convergence, and whether Judge runs depends on
+  // the judge toggle. meta must be a pure literal (can't read args), so declaring
+  // a fixed Round 1..4 + Judge here would show phases that never run. Instead the
+  // phases are created at runtime by phase('Round N') / phase('Judge') calls below,
+  // so /workflows shows EXACTLY the rounds that execute — nothing phantom.
 }
 
 // ---- parameters (from the /arena command via args) ----
@@ -28,13 +27,10 @@ const MIN = Math.max(1, Number(A.minRounds || 2))
 const MAX = Math.max(MIN, Number(A.maxRounds || 4))
 const JUDGE = A.judge !== false && A.judge !== 'false'
 const PATH = A.path || '.'
-// Judge should ideally NOT be one of the debaters (avoid self-judging bias).
-// Prefer a usable model outside the debate; fall back to claude, then any debater.
-const ALL_MODELS = ['claude', 'grok', 'codex']
-const NEUTRAL = ALL_MODELS.filter((x) => !MODELS.includes(x))
-const JUDGE_MODEL = A.judgeModel
-  || (NEUTRAL.includes('claude') ? 'claude' : NEUTRAL[0])
-  || (MODELS.includes('claude') ? 'claude' : MODELS[0])
+// The judge defaults to claude (the host model — always available), and can be
+// overridden with A.judgeModel. Claude judging is a sensible, reliable default;
+// a caller who wants a strictly-neutral non-debater judge passes judgeModel.
+const JUDGE_MODEL = A.judgeModel || 'claude'
 const JUDGE_NEUTRAL = !MODELS.includes(JUDGE_MODEL)
 // arena.py path: the /arena command resolves ${CLAUDE_PLUGIN_ROOT} and passes it
 // as args.arenaPath (workflow JS can't rely on the plugin-root var itself). The
@@ -64,9 +60,9 @@ const FINDINGS_SCHEMA = {
 
 const F = (o) => JSON.stringify((o && o.findings) || [])
 
-// fun phase names for /workflows (round-by-round, so each round is its own node)
-const ROUND_TAGS = { 1: 'Recon', 2: 'Clash', 3: 'Duel', 4: 'Rematch', 5: 'Finale' }
-function roundName(rn) { return `Round ${rn} · ${ROUND_TAGS[rn] || ('Overtime ' + (rn - 5))}` }
+// Plain round-by-round phase names for /workflows (each round is its own node).
+// Just "Round N" — no codenames; the number IS the round.
+function roundName(rn) { return `Round ${rn}` }
 const JUDGE_PHASE = 'Judge'
 
 // One model, one round: a general-purpose agent drives `arena.py once` (which runs

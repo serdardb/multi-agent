@@ -3,7 +3,7 @@
   "owner": { "name": "SerdarDB" },
   "metadata": {
     "description": "Marketplace for the multi-agent cross-model review plugin.",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "plugins": [
     {
