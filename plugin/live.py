@@ -85,6 +85,7 @@ class CodexLiveSession:
         self._phase = {}        # itemId -> agentMessage phase
         self._say = ""          # codex's spoken reply (non-final agentMessage)
         self._say_done = False
+        self._thought = ""      # codex's live reasoning summary (its "thinking")
         self.last_findings = None
 
     # --- jsonrpc plumbing ---
@@ -120,6 +121,15 @@ class CodexLiveSession:
             time.sleep(0.03)
         return None
 
+    def _flush_thought(self, force=False):
+        """Surface codex's live REASONING SUMMARY (its 'thinking') as it works, so
+        the agent visibly reasons underneath — the same live feel as grok. This is
+        a separate channel from the findings JSON and is never captured as output."""
+        s = self._thought.strip().replace("\n", " ")
+        if s and (force or len(s) >= 70 or s[-1] in ".!?:)*"):
+            log("  codex ▸ " + s[:200])
+            self._thought = ""
+
     def _flush_say(self, force=False):
         """Surface codex's SPOKEN reply (a non-final agentMessage answering a
         mid-turn question) live, so the host can relay it verbatim."""
@@ -148,10 +158,20 @@ class CodexLiveSession:
                 self._send({"jsonrpc": "2.0", "id": mid, "result": {}})
             return
         p = m.get("params") or {}
+        if method == "item/reasoning/summaryTextDelta":
+            # codex's live reasoning summary streams here token-by-token
+            self._thought += p.get("delta") or ""
+            self._flush_thought()
+            return
+        if method == "item/reasoning/summaryPartAdded":
+            # a new reasoning paragraph begins — flush the current one so they split
+            self._flush_thought(force=True)
+            return
         if method == "item/started":
             it = p.get("item") or {}
             t = it.get("type")
             if t == "commandExecution" and it.get("command"):
+                self._flush_thought(force=True)
                 log("  codex ▸ " + str(it["command"])[:80])
             elif t == "agentMessage":
                 self._phase[it.get("id")] = it.get("phase")
@@ -172,6 +192,7 @@ class CodexLiveSession:
                 self._final_item = it.get("id")
         elif method == "turn/completed":
             self.turn_active = False
+            self._flush_thought(force=True)  # surface any trailing reasoning
             self._flush_say(force=True)  # surface any trailing spoken reply
             raw = self._final.get(self._final_item, "") or max(self._final.values(), key=len, default="")
             self.last_findings = raw
@@ -197,8 +218,14 @@ class CodexLiveSession:
         if self._wait(rid, 20) is None:
             raise RuntimeError("codex app-server: no initialize response")
         self._notify("initialized")
+        # Turn ON codex's reasoning-summary stream so it visibly THINKS as it works
+        # (item/reasoning/summaryTextDelta). This is a separate channel from the
+        # findings JSON — surfaced live as `codex ▸ …`, giving codex the same
+        # real-agent feel grok gets from its agent_thought_chunk stream.
         rid = self._req("thread/start", {"cwd": self.cwd, "ephemeral": True,
-                                         "developerInstructions": self.instructions})
+                                         "developerInstructions": self.instructions,
+                                         "config": {"model_reasoning_effort": "high",
+                                                    "model_reasoning_summary": "detailed"}})
         res = self._wait(rid, 30)
         self.thread_id = ((res or {}).get("thread") or {}).get("id")
         if not self.thread_id:
@@ -211,6 +238,7 @@ class CodexLiveSession:
         self._phase = {}
         self._say = ""
         self._say_done = False
+        self._thought = ""
         self.last_findings = None
         rid = self._req("turn/start", {"threadId": self.thread_id,
                                        "input": [{"type": "text", "text": text}],
