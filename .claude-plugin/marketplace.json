@@ -1,0 +1,15 @@
+{
+  "name": "multi-agent",
+  "owner": { "name": "SerdarDB" },
+  "metadata": {
+    "description": "Marketplace for the multi-agent cross-model review plugin.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "multi-agent",
+      "source": "./plugin",
+      "description": "Run your own agent on other AI model CLIs (grok/codex/claude) as independent second opinions — deterministic multi-model arena + live steerable review."
+    }
+  ]
+}

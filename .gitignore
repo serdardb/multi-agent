@@ -1,0 +1,10 @@
+# Raw model output + normalized findings can contain real source / secrets
+# from whatever project you point --path at. Never commit them.
+out/
+__pycache__/
+*.pyc
+
+# local / editor / other-tool state — not part of the plugin
+.bridge/
+.idea/
+.DS_Store
