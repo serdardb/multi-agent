@@ -11,20 +11,24 @@ The point is diversity, not redundancy: when independent models **converge** on 
 ## Two commands
 
 ### `/arena` — deterministic multi-model arena
-Every selected model audits the target **independently**, then they **cross-critique** each other round after round until positions **converge** (or hit a max), then a **judge** verifies the disputed and high-severity claims **against the real code**, and a **scoreboard** ranks the models. Runs as a native Workflow — watch it live in `/workflows`.
+Every selected model audits the target **independently**, then they **cross-critique** each other round after round until positions **converge** (or hit your max), then a **judge** verifies the disputed and high-severity claims **against the real code**, and a **scoreboard** ranks the models. Runs as a native Workflow — watch it live in `/workflows`.
 
 ```
-Round 1 · Recon    each model audits independently
-Round 2 · Clash    first cross-critique (AGREE / REFUTE / CONCEDE, citing code)
-Round 3 · Duel     more critique — continues only while positions keep moving
-  …                convergence-gated: stops when nobody changes position, or at max rounds
-Judge              opens the code, confirms/rejects each claim, emits the final ranked list + 🏆 scoreboard
+Round 1        each model audits independently
+Round 2        first cross-critique (KEEP / WITHDRAW / ADOPT / NEW, citing code)
+Round 3, 4…    more critique — added ONLY while positions keep moving,
+               up to your max (convergence-gated: stops the moment nobody's
+               position changes, at or after your min)
+Judge          opens the code, confirms/rejects each claim, emits the final
+               ranked list + 🏆 scoreboard   (runs only if you enable it)
 ```
+
+You pick the models, the min/max rounds, and whether to run the judge — and `/workflows` shows **exactly the rounds that execute** (a 1-round run shows only `Round 1`; `min 2 / max 2` shows `Round 1`, `Round 2`; a higher max extends only if the debate keeps moving). The judge defaults to **claude** (the host model, always available) and can be overridden.
 
 The scoreboard is **post-hoc and judge-grounded** (models are never told they're being scored, so the debate stays about truth): `+` confirmed findings (severity-weighted), `−` false positives, `+` unique real catches, `+` honest concessions the judge agreed with.
 
 ### `/multi-agent` — single-model, live, steerable review
-Run one model as a background reviewer and **talk to it while it works**: type a question or a directive and it answers you, then keeps auditing.
+Runs as a **forked background agent** — it appears underneath the main thread and works live: you watch the target model **think and run tools in real time** (`codex ▸ …` / `grok ▸ …`), and you can **talk to it while it works** — type a question or a directive and it answers you, then keeps auditing. When it finishes it posts a severity-ranked findings list; the session stays open for follow-ups.
 
 ```
 /multi-agent <agent> <codex|grok> <what to review, in plain words>
@@ -55,9 +59,10 @@ Inside Claude Code:
 ```
 /plugin marketplace add serdardb/multi-agent
 /plugin install multi-agent@multi-agent
+/reload-plugins
 ```
 
-(or from a shell: `claude plugin marketplace add serdardb/multi-agent` then `claude plugin install multi-agent@multi-agent`).
+`/reload-plugins` is **required the first time** — Claude Code prints *"Run /reload-plugins to apply"* after install. (Shell equivalents: `claude plugin marketplace add serdardb/multi-agent` then `claude plugin install multi-agent@multi-agent`.)
 
 Then, in any project, use the commands directly:
 
